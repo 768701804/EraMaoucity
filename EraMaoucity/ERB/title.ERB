@@ -1,0 +1,31 @@
+﻿; ============================================================
+; 榨取魔城 · title.ERB
+; 标题画面：新游戏 / 读档 / 退出
+; ============================================================
+
+@SYSTEM_TITLE
+ALIGNMENT CENTER
+DRAWLINE
+SETCOLOR 192, 0, 192
+PRINTL 榨 取 魔 城
+RESETCOLOR
+DRAWLINE
+PRINTL 魔王经营 · 成人向文字游戏
+PRINTL
+PRINTL 全部角色均为成年人
+PRINTL
+PRINTL [0] 新游戏
+PRINTL [1] 读取存档
+PRINTL [2] 退出
+INPUT
+
+SELECTCASE RESULT
+CASE 0
+	BEGIN FIRST
+CASE 1
+	ALIGNMENT LEFT
+	LOADGAME
+	BEGIN SHOP
+CASEELSE
+	QUIT
+ENDSELECT

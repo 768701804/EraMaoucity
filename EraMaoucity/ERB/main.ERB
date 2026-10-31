@@ -1,0 +1,289 @@
+﻿; ============================================================
+; 榨取魔城 · main.ERB
+; 初始化 / 主界面 / 主菜单 / 回合结算 / 结局
+; ============================================================
+
+; ------------------------------------------------------------
+; 新游戏初始化
+; ------------------------------------------------------------
+@EVENTFIRST
+天数 = 1
+AP = 2
+MANA = 500
+GOLD = 0
+MILK = 0
+SEMEN = 0
+LOVE = 0
+URINE = 0
+BLOOD = 0
+DEFENSE = 10
+TROOPS = 2
+GENERALS = 0
+SLAVENUM = 0
+ADVNUM = 0
+GAMEOVER = 0
+WIN = 0
+
+; 开局送一名俘虏
+SLV_NAME:0 '= "村姑·艾拉"
+SLV_JOB:0 = 3
+SLV_HP:0 = 100
+SLV_SP:0 = 100
+SLV_RESIST:0 = 60
+SLV_OBEY:0 = 10
+SLV_CORRUPT:0 = 0
+SLV_SENS:0 = 15
+SLV_EXP:0 = 0
+SLV_ASSIGN:0 = 0
+SLV_PREG:0 = 0
+SLV_LACT:0 = 0
+SLAVENUM = 1
+
+BEGIN SHOP
+
+; ------------------------------------------------------------
+; 主界面
+; ------------------------------------------------------------
+@SHOW_SHOP
+CLEARLINE LINECOUNT
+ALIGNMENT CENTER
+DRAWLINE
+SETCOLOR 192, 0, 192
+PRINTFORML 榨取魔城　第 {天数} 天
+RESETCOLOR
+DRAWLINE
+ALIGNMENT LEFT
+PRINTFORML 行动力 {AP}/2　　魔力 {MANA}　　金币 {GOLD}
+PRINTFORML 体液：乳 {MILK} · 精 {SEMEN} · 爱 {LOVE} · 尿 {URINE} · 血 {BLOOD}
+PRINTFORML 城防 {DEFENSE}　　兵力 {TROOPS}　　奴隶 {SLAVENUM} 人　　入侵者 {ADVNUM} 人
+DRAWLINE
+PRINTFORM %"[100] 调教（1AP）", 26, LEFT %
+PRINTFORML %"[101] 榨取（1AP）", 26, LEFT %
+PRINTFORM %"[102] 设施分配（0AP）", 26, LEFT %
+PRINTFORML %"[103] 征召兵力（1AP）", 26, LEFT %
+PRINTFORM %"[104] 出征（1AP）", 26, LEFT %
+PRINTFORML %"[105] 实验室（1AP）", 26, LEFT %
+PRINTFORM %"[106] 强化城防（0AP）", 26, LEFT %
+PRINTFORML %"[107] 结束回合", 26, LEFT %
+PRINTFORM %"[108] 存档", 26, LEFT %
+PRINTFORML %"[109] 读档", 26, LEFT %
+
+; ------------------------------------------------------------
+; 主菜单输入
+; ------------------------------------------------------------
+@USERSHOP
+; 引擎在调用 USERSHOP 前已经 INPUT 过一次，这里直接读 RESULT
+SELECTCASE RESULT
+CASE 100
+	CALL TRAIN_MENU
+	BEGIN SHOP
+CASE 101
+	CALL EXTRACT_MENU
+	BEGIN SHOP
+CASE 102
+	CALL FACILITY_MENU
+	BEGIN SHOP
+CASE 103
+	CALL RECRUIT_MENU
+	BEGIN SHOP
+CASE 104
+	CALL EXPEDITION_MENU
+	BEGIN SHOP
+CASE 105
+	CALL LAB_MENU
+	BEGIN SHOP
+CASE 106
+	CALL DEFENSE_MENU
+	BEGIN SHOP
+CASE 107
+	CALL NEXT_DAY
+	BEGIN SHOP
+CASE 108
+	SAVEGAME
+	BEGIN SHOP
+CASE 109
+	LOADGAME
+	BEGIN SHOP
+ENDSELECT
+BEGIN SHOP
+
+; ------------------------------------------------------------
+; 回合结算
+; ------------------------------------------------------------
+@NEXT_DAY
+
+CLEARLINE LINECOUNT
+ALIGNMENT CENTER
+PRINTL ── 夜幕降临 ──
+ALIGNMENT LEFT
+
+; ---- 设施产出 ----
+I = 0
+WHILE I < SLAVENUM
+	D = SLV_ASSIGN:I
+	IF D == 0
+		I += 1
+		CONTINUE
+	ENDIF
+	; 设施里的人会持续消耗体力
+	SLV_HP:I -= 8
+	SLV_SP:I -= 10
+	IF SLV_HP:I <= 0
+		PRINTFORML %SLV_NAME:I%在设施里被榨干了……她死了。
+		CALL REMOVE_SLAVE(I)
+		CONTINUE
+	ENDIF
+	SELECTCASE D
+	CASE 1
+		LOVE += 20 + SLV_SENS:I / 5
+		MANA += 30
+		SLV_SENS:I += 1
+		PRINTFORML 触手深渊里，%SLV_NAME:I%又流了一夜的淫水。
+	CASE 2
+		SEMEN += 15
+		MANA += 10
+		IF SLV_PREG:I == 0 && RAND:100 < 12
+			SLV_PREG:I = 9
+			PRINTFORML 哥布林巢穴里，%SLV_NAME:I%被按着灌满了。
+		ENDIF
+	CASE 3
+		MANA += 40
+		SLV_SP:I -= 10
+		PRINTFORML %SLV_NAME:I%被自动调教机折腾了一夜，魔力顺着导管流出来。
+	CASE 4
+		MILK += 40
+		SLV_SP:I -= 12
+		PRINTFORML 榨乳农场里，%SLV_NAME:I%的乳房被抽得发软。
+	CASE 5
+		BLOOD += 30
+		SLV_HP:I -= 25
+		PRINTFORML 采血室里，%SLV_NAME:I%的脖子上多了一个新针眼。
+	CASE 6
+		IF SLV_PREG:I > 0
+			SLV_PREG:I -= 1
+			IF SLV_PREG:I <= 0
+				MANA += 100
+				MILK += 20
+				SLV_LACT:I = 1
+				PRINTFORML 育儿室里，%SLV_NAME:I%生下了一个孩子，被你收进了苗床。
+			ENDIF
+		ENDIF
+	ENDSELECT
+	I += 1
+WEND
+
+; ---- 冒险者推进 ----
+IF ADVNUM > 0
+	PRINTL
+	PRINTL ── 入侵者推进 ──
+ENDIF
+I = 0
+WHILE I < ADVNUM
+	; 陷阱迟滞
+	IF RAND:100 < 30 + DEFENSE / 2
+		PRINTFORML %ADV_NAME:I%被陷阱拖住，停留在第 {ADV_DEPTH:I} 层。
+	ELSE
+		ADV_DEPTH:I += 1
+		PRINTFORML %ADV_NAME:I%突破到第 {ADV_DEPTH:I} 层。
+	ENDIF
+	; 陷阱伤害
+	D = DEFENSE / 2 + 5
+	ADV_HP:I -= D
+	IF ADV_HP:I <= 0
+		PRINTFORML %ADV_NAME:I%被陷阱放倒，拖进了地牢。
+		CALL CAPTURE_ADV(I)
+		CONTINUE
+	ENDIF
+	; 抵达最深层 → 决战
+	IF ADV_DEPTH:I >= 9
+		CLEARLINE LINECOUNT
+		PRINTL
+		PRINTFORML %ADV_NAME:I%闯进了魔王的房间！
+		CALL TOTAL_POWER
+		P = RESULT
+		A = ADV_HP:I / 4 + 60
+		PRINTFORML 你的战力 {P}　对手 {A}
+		IF P >= A
+			PRINTL 你把她按在王座上，战斗结束了。
+			CALL CAPTURE_ADV(I)
+			CONTINUE
+		ELSE
+			CALL ENDING_LOSE
+			RETURN 0
+		ENDIF
+	ENDIF
+	I += 1
+WEND
+
+; ---- 新入侵者 ----
+IF ADVNUM < 6 && RAND:100 < 70
+	CALL ADD_ADVENTURER
+	PRINTFORML 又有一名冒险者从第 1 层溜了进来。
+ENDIF
+
+; ---- 新的一天 ----
+AP = 2
+天数 += 1
+RETURN 1
+
+; ------------------------------------------------------------
+; 移除奴隶（死亡 / 放生）
+; ------------------------------------------------------------
+@REMOVE_SLAVE(ARG)
+J = ARG
+WHILE J < SLAVENUM - 1
+	K = J + 1
+	SLV_NAME:J '= %SLV_NAME:K%
+	SLV_JOB:J = SLV_JOB:K
+	SLV_HP:J = SLV_HP:K
+	SLV_SP:J = SLV_SP:K
+	SLV_RESIST:J = SLV_RESIST:K
+	SLV_OBEY:J = SLV_OBEY:K
+	SLV_CORRUPT:J = SLV_CORRUPT:K
+	SLV_SENS:J = SLV_SENS:K
+	SLV_EXP:J = SLV_EXP:K
+	SLV_ASSIGN:J = SLV_ASSIGN:K
+	SLV_PREG:J = SLV_PREG:K
+	SLV_LACT:J = SLV_LACT:K
+	J += 1
+WEND
+SLAVENUM -= 1
+RETURN 1
+
+; ------------------------------------------------------------
+; 结局：魔王城陷落
+; ------------------------------------------------------------
+@ENDING_LOSE
+CLEARLINE LINECOUNT
+ALIGNMENT CENTER
+DRAWLINE
+PRINTL 勇者攻陷了魔王城
+DRAWLINE
+ALIGNMENT LEFT
+PRINTW 你被按在碎裂的王座上，魔力顺着伤口一点点流干。
+PRINTW 她们把你的角锯下来，钉在人类王国的城门口。
+PRINTW 你的地牢、你的触手深渊、你养的那些女人——全部归了胜者。
+PRINTL
+PRINTL 【结局 · 魔王城陷落】
+PRINTL 你输掉了一切。
+WAIT
+QUIT
+
+; ------------------------------------------------------------
+; 结局：榨取帝国
+; ------------------------------------------------------------
+@ENDING_WIN
+CLEARLINE LINECOUNT
+ALIGNMENT CENTER
+DRAWLINE
+PRINTL 榨取帝国
+DRAWLINE
+ALIGNMENT LEFT
+PRINTW 王都陷落了。人类的国王跪在你面前，签下了那份"勇者供应协定"。
+PRINTW 从今往后，每年都会有年轻的女人被送进你的地牢，供你榨取、调教、生育。
+PRINTW 你不必再抢了——她们会自己送上门来。
+PRINTL
+PRINTL 【结局 · 榨取帝国】
+PRINTL 人类王国成了你的牧场。
+WAIT
+QUIT

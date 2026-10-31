@@ -1,0 +1,109 @@
+﻿; ============================================================
+; 榨取魔城 · lab.ERB
+; 实验室：改造肉体、催化恶堕
+; ============================================================
+
+@LAB_MENU
+IF SLAVENUM == 0
+	PRINTL 实验室里没有实验体。
+	RETURN 0
+ENDIF
+$LAB_SELECT
+CLEARLINE LINECOUNT
+ALIGNMENT CENTER
+PRINTL ── 实验室 · 选择实验体 ──
+ALIGNMENT LEFT
+FOR I, 0, SLAVENUM
+	PRINTFORML [{I + 1}] %SLV_NAME:I%　体力{SLV_HP:I} 敏感{SLV_SENS:I} 服从{SLV_OBEY:I} 恶堕{SLV_CORRUPT:I}/10
+NEXT
+PRINTL [0] 返回
+INPUT
+IF RESULT == 0
+	RETURN 0
+ENDIF
+I = RESULT - 1
+IF I < 0 || I >= SLAVENUM
+	GOTO LAB_SELECT
+ENDIF
+CALL USE_AP(1)
+IF RESULT == 0
+	RETURN 0
+ENDIF
+
+$LAB_CMD
+CLEARLINE LINECOUNT
+SETCOLOR 128, 0, 160
+PRINTFORML 实验台 · %SLV_NAME:I%
+RESETCOLOR
+PRINTFORML 魔力 {MANA}　体力 {SLV_HP:I}　敏感 {SLV_SENS:I}　服从 {SLV_OBEY:I}　恶堕 {SLV_CORRUPT:I}/10
+IF SLV_LACT:I == 1
+	PRINTL 体质：已泌乳
+ENDIF
+DRAWLINE
+PRINTL [1] 泌乳改造（200 魔力）
+PRINTL [2] 敏感强化（150 魔力）
+PRINTL [3] 服从灌输（300 魔力）
+PRINTL [4] 体力强化（150 魔力）
+PRINTL [5] 恶堕催化（400 魔力）
+PRINTL [0] 结束
+INPUT
+C = RESULT
+
+SELECTCASE C
+CASE 0
+	RETURN 0
+CASE 1
+	IF MANA < 200
+		PRINTL 魔力不够。
+		WAIT
+		GOTO LAB_CMD
+	ENDIF
+	MANA -= 200
+	SLV_LACT:I = 1
+	PRINTW 你给她注入了泌乳药剂。她的胸口很快胀起来，衣料被顶出两点湿痕。
+CASE 2
+	IF MANA < 150
+		PRINTL 魔力不够。
+		WAIT
+		GOTO LAB_CMD
+	ENDIF
+	MANA -= 150
+	SLV_SENS:I += 10
+	PRINTW 你调整了她神经的敏感度。之后哪怕只是风吹过，她都会抖。
+CASE 3
+	IF MANA < 300
+		PRINTL 魔力不够。
+		WAIT
+		GOTO LAB_CMD
+	ENDIF
+	MANA -= 300
+	SLV_OBEY:I += 20
+	SLV_RESIST:I -= 20
+	PRINTW 你把手按在她额头上，一点点磨掉她心里那点不肯。
+CASE 4
+	IF MANA < 150
+		PRINTL 魔力不够。
+		WAIT
+		GOTO LAB_CMD
+	ENDIF
+	MANA -= 150
+	SLV_HP:I += 30
+	IF SLV_HP:I > 100
+		SLV_HP:I = 100
+	ENDIF
+	PRINTW 你给她灌下魔药，她的呼吸稳了下来，能撑更久了。
+CASE 5
+	IF MANA < 400
+		PRINTL 魔力不够。
+		WAIT
+		GOTO LAB_CMD
+	ENDIF
+	MANA -= 400
+	SLV_CORRUPT:I += 4
+	PRINTW 你把魔界的碎片塞进她身体里。她疼得蜷起来，眼神却开始变得不对。
+CASEELSE
+	GOTO LAB_CMD
+ENDSELECT
+
+CALL UPDATE_STATE(I)
+GOTO LAB_CMD

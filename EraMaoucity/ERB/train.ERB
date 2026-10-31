@@ -1,0 +1,278 @@
+﻿; ============================================================
+; 榨取魔城 · train.ERB
+; 调教与榨取（成人向核心玩法）
+; ============================================================
+
+; ------------------------------------------------------------
+; 选择调教对象
+; ------------------------------------------------------------
+@TRAIN_MENU
+IF SLAVENUM == 0
+	PRINTL 地牢里还没有人，先去抓一个。
+	RETURN 0
+ENDIF
+$SELECT_LOOP
+CLEARLINE LINECOUNT
+ALIGNMENT CENTER
+PRINTL ── 选择要调教的人 ──
+ALIGNMENT LEFT
+FOR I, 0, SLAVENUM
+	CALL SLAVE_STATE(I)
+	S = RESULT
+	PRINTFORM [{I + 1}] %SLV_NAME:I%
+	IF S == 2
+		PRINTFORM （已恶堕）
+	ELSEIF S == 1
+		PRINTFORM （已服从）
+	ELSE
+		PRINTFORM （抵抗中）
+	ENDIF
+	PRINTFORML 　体力{SLV_HP:I} 气力{SLV_SP:I} 服从{SLV_OBEY:I} 反抗{SLV_RESIST:I}
+NEXT
+PRINTL [0] 返回
+INPUT
+IF RESULT == 0
+	RETURN 0
+ENDIF
+I = RESULT - 1
+IF I < 0 || I >= SLAVENUM
+	GOTO SELECT_LOOP
+ENDIF
+CALL TRAIN_ACTION(I)
+RETURN 1
+
+; ------------------------------------------------------------
+; 对某个人执行一条调教指令
+; ------------------------------------------------------------
+@TRAIN_ACTION(ARG)
+
+$CMD_LOOP
+CLEARLINE LINECOUNT
+ALIGNMENT CENTER
+SETCOLOR 192, 0, 192
+PRINTFORML 调教 · %SLV_NAME:ARG%
+RESETCOLOR
+DRAWLINE
+ALIGNMENT LEFT
+PRINTFORML 体力 {SLV_HP:ARG}　气力 {SLV_SP:ARG}　敏感 {SLV_SENS:ARG}
+PRINTFORML 服从 {SLV_OBEY:ARG}　反抗 {SLV_RESIST:ARG}　恶堕 {SLV_CORRUPT:ARG}/10
+IF SLV_PREG:ARG > 0
+	PRINTFORML 怀孕中（还剩 {SLV_PREG:ARG} 天）
+ENDIF
+DRAWLINE
+PRINTL [1] 爱抚　　[2] 榨乳　　[3] 榨取爱液
+PRINTL [4] 本番　　[5] 触手调教　[6] 鞭打
+PRINTL [7] 兽奸　　[8] 强制绝顶　[9] 采血
+PRINTL [0] 返回
+INPUT
+C = RESULT
+IF C == 0
+	RETURN 0
+ENDIF
+CALL USE_AP(1)
+IF RESULT == 0
+	RETURN 0
+ENDIF
+
+SELECTCASE C
+CASE 1
+	CLEARLINE LINECOUNT
+	PRINTW 你的手指顺着她的锁骨滑下去，隔着布料按在那处已经发硬的地方。
+	PRINTW 她咬着嘴唇不肯出声，腰却先抖了一下。
+	SLV_SENS:ARG += 3
+	LOVE += 15
+	MANA += 20
+	SLV_SP:ARG -= 8
+	SLV_RESIST:ARG -= 3
+	SLV_OBEY:ARG += 2
+CASE 2
+	IF SLV_LACT:ARG == 0 && SLV_PREG:ARG == 0
+		PRINTL 她还没有泌乳，先让她怀上，或者去实验室改造。
+		GOTO CMD_LOOP
+	ENDIF
+	CLEARLINE LINECOUNT
+	PRINTW 你把她按在榨乳器上，乳白色的液体一股股被抽进瓶子里。
+	PRINTW 她小声抽着气，腿间又湿了一片。
+	MILK += 30
+	MANA += 10
+	SLV_SP:ARG -= 12
+	SLV_OBEY:ARG += 1
+CASE 3
+	CLEARLINE LINECOUNT
+	PRINTW 你的手指插进那处湿热里，抽出来时拉出一条亮丝。
+	PRINTW 她把脸埋进臂弯，声音闷得发抖。
+	LOVE += 25
+	MANA += 25
+	SLV_SENS:ARG += 2
+	SLV_SP:ARG -= 10
+	SLV_OBEY:ARG += 1
+CASE 4
+	CLEARLINE LINECOUNT
+	PRINTW 你把她压在石床上，从后面整个没入。
+	PRINTW 她叫出声，又被自己的手捂住；抽送的声音在石室里回荡。
+	MANA += 60
+	LOVE += 30
+	SLV_OBEY:ARG += 4
+	SLV_RESIST:ARG -= 4
+	SLV_SP:ARG -= 15
+	IF SLV_PREG:ARG == 0 && RAND:100 < 25
+		SLV_PREG:ARG = 9
+		PRINTL 你射在了最里面。她大概会怀上。
+	ENDIF
+CASE 5
+	CLEARLINE LINECOUNT
+	PRINTW 触手从墙里探出来，缠住她的四肢，尖端一根根顶进身体。
+	PRINTW 她被吊在半空，连挣扎都做不到，只能被翻来覆去地用。
+	MANA += 40
+	LOVE += 35
+	SLV_SENS:ARG += 6
+	SLV_OBEY:ARG += 3
+	SLV_CORRUPT:ARG += 2
+	SLV_SP:ARG -= 20
+CASE 6
+	CLEARLINE LINECOUNT
+	PRINTW 鞭子落下去，一道红痕从肩胛拉到腰侧。
+	PRINTW 她疼得弓起背，眼泪掉下来，却不敢躲。
+	MANA += 50
+	BLOOD += 10
+	SLV_RESIST:ARG -= 8
+	SLV_HP:ARG -= 15
+	SLV_SP:ARG -= 25
+	SLV_OBEY:ARG += 1
+CASE 7
+	CLEARLINE LINECOUNT
+	PRINTW 你把牵来的兽人按到她身上。她被顶着往前爬，又被拽着腰拖回来。
+	PRINTW 结束后，她的小腹上沾满了白浊。
+	MANA += 45
+	SEMEN += 20
+	SLV_RESIST:ARG -= 5
+	SLV_CORRUPT:ARG += 2
+	SLV_SP:ARG -= 20
+CASE 8
+	CLEARLINE LINECOUNT
+	PRINTW 你把她绑在调教机上，用器械把她一次次推上去，不准她停。
+	PRINTW 到后来她已经叫不出完整的字，只会抖。
+	MANA += 55
+	LOVE += 40
+	SLV_SENS:ARG += 5
+	SLV_SP:ARG -= 30
+CASE 9
+	CLEARLINE LINECOUNT
+	PRINTW 针头刺进她手臂内侧，暗红的液体慢慢注满管子。
+	PRINTW 她脸色发白，却乖顺地伸着手。
+	BLOOD += 40
+	MANA += 30
+	SLV_HP:ARG -= 60
+CASEELSE
+	GOTO CMD_LOOP
+ENDSELECT
+
+SLV_EXP:ARG += 30
+CALL UPDATE_STATE(ARG)
+RETURN 1
+
+; ------------------------------------------------------------
+; 数值收束与堕落判定
+; ------------------------------------------------------------
+@UPDATE_STATE(ARG)
+; 上下限
+IF SLV_OBEY:ARG > 100
+	SLV_OBEY:ARG = 100
+ENDIF
+IF SLV_RESIST:ARG < 0
+	SLV_RESIST:ARG = 0
+ENDIF
+IF SLV_RESIST:ARG > 100
+	SLV_RESIST:ARG = 100
+ENDIF
+IF SLV_SENS:ARG > 100
+	SLV_SENS:ARG = 100
+ENDIF
+IF SLV_CORRUPT:ARG > 20
+	SLV_CORRUPT:ARG = 20
+ENDIF
+IF SLV_HP:ARG > 100
+	SLV_HP:ARG = 100
+ENDIF
+IF SLV_SP:ARG > 100
+	SLV_SP:ARG = 100
+ENDIF
+
+; 服从
+IF SLV_OBEY:ARG == 50 && SLV_RESIST:ARG <= 40
+	PRINTFORML %SLV_NAME:ARG%的眼神变了。她开始听话了。
+ENDIF
+
+; 恶堕
+IF SLV_CORRUPT:ARG == 10 && SLV_OBEY:ARG >= 80
+	PRINTFORML %SLV_NAME:ARG%彻底堕落了——现在她只想被你用。
+ENDIF
+RETURN 1
+
+; ------------------------------------------------------------
+; 榨取：快速采集体液
+; ------------------------------------------------------------
+@EXTRACT_MENU
+IF SLAVENUM == 0
+	PRINTL 没有人可以榨。
+	RETURN 0
+ENDIF
+$EX_SELECT
+CLEARLINE LINECOUNT
+ALIGNMENT CENTER
+PRINTL ── 榨取 · 选择对象 ──
+ALIGNMENT LEFT
+FOR I, 0, SLAVENUM
+	PRINTFORML [{I + 1}] %SLV_NAME:I%　体力{SLV_HP:I} 气力{SLV_SP:I}
+NEXT
+PRINTL [0] 返回
+INPUT
+IF RESULT == 0
+	RETURN 0
+ENDIF
+I = RESULT - 1
+IF I < 0 || I >= SLAVENUM
+	GOTO EX_SELECT
+ENDIF
+
+CLEARLINE LINECOUNT
+PRINTL 要榨什么？
+PRINTL [1] 乳汁　[2] 爱液　[3] 尿液　[4] 血液　[0] 返回
+INPUT
+T = RESULT
+IF T == 0
+	GOTO EX_SELECT
+ENDIF
+CALL USE_AP(1)
+IF RESULT == 0
+	RETURN 0
+ENDIF
+
+SELECTCASE T
+CASE 1
+	IF SLV_LACT:I == 0 && SLV_PREG:I == 0
+		PRINTL 她现在榨不出奶。
+		RETURN 0
+	ENDIF
+	MILK += 25 + SLV_SENS:I / 4
+	SLV_SP:I -= 10
+	PRINTW 你把她的乳房含进嘴里，又换上吸盘，乳汁一股股流出来。
+CASE 2
+	LOVE += 20 + SLV_SENS:I / 4
+	SLV_SENS:I += 1
+	SLV_SP:I -= 8
+	PRINTW 你把手伸进她腿间，把那些黏糊糊的东西刮下来存进瓶子。
+CASE 3
+	URINE += 35
+	SLV_SP:I -= 10
+	PRINTW 你按住她的小腹，逼她在你面前失禁，尿液顺着大腿流下来。
+CASE 4
+	BLOOD += 35
+	SLV_HP:I -= 50
+	PRINTW 针管抽满一支暗红，她的脸白得像纸。
+CASEELSE
+	GOTO EX_SELECT
+ENDSELECT
+
+CALL UPDATE_STATE(I)
+RETURN 1

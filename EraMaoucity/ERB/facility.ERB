@@ -1,0 +1,72 @@
+﻿; ============================================================
+; 榨取魔城 · facility.ERB
+; 设施分配：把人塞进产线，日终自动产出
+; ============================================================
+
+@FACILITY_MENU
+IF SLAVENUM == 0
+	PRINTL 没有人可以安排。
+	RETURN 0
+ENDIF
+$FAC_SELECT
+CLEARLINE LINECOUNT
+ALIGNMENT CENTER
+PRINTL ── 设施分配 ──
+ALIGNMENT LEFT
+PRINTL 1 触手深渊（爱液/魔力）　2 哥布林巢穴（精液/受孕）
+PRINTL 3 自动调教机（魔力）　　　4 榨乳农场（乳汁）
+PRINTL 5 采血室（血液/伤身）　　6 育儿室（生产）
+DRAWLINE
+FOR I, 0, SLAVENUM
+	CALL SLAVE_STATE(I)
+	S = RESULT
+	PRINTFORM [{I + 1}] %SLV_NAME:I%　
+	IF S == 0
+		PRINTFORM （抵抗中·不可安排）
+	ELSE
+		SELECTCASE SLV_ASSIGN:I
+		CASE 0
+			PRINTFORM 待命
+		CASE 1
+			PRINTFORM 触手深渊
+		CASE 2
+			PRINTFORM 哥布林巢穴
+		CASE 3
+			PRINTFORM 自动调教机
+		CASE 4
+			PRINTFORM 榨乳农场
+		CASE 5
+			PRINTFORM 采血室
+		CASE 6
+			PRINTFORM 育儿室
+		ENDSELECT
+	ENDIF
+	PRINTL
+NEXT
+PRINTL [0] 返回
+INPUT
+IF RESULT == 0
+	RETURN 0
+ENDIF
+I = RESULT - 1
+IF I < 0 || I >= SLAVENUM
+	GOTO FAC_SELECT
+ENDIF
+CALL SLAVE_STATE(I)
+IF RESULT == 0
+	PRINTL 她还没服从，安排不了。
+	WAIT
+	GOTO FAC_SELECT
+ENDIF
+
+CLEARLINE LINECOUNT
+PRINTFORML 把 %SLV_NAME:I% 安排到哪里？
+PRINTL [0] 待命　[1] 触手深渊　[2] 哥布林巢穴　[3] 自动调教机
+PRINTL [4] 榨乳农场　[5] 采血室　[6] 育儿室
+INPUT
+F = RESULT
+IF F < 0 || F > 6
+	GOTO FAC_SELECT
+ENDIF
+SLV_ASSIGN:I = F
+RETURN 1

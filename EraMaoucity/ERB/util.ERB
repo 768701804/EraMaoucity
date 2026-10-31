@@ -1,0 +1,166 @@
+﻿; ============================================================
+; 榨取魔城 · util.ERB
+; 工具函数：生成冒险者、捕获、转奴隶、战力计算
+; ============================================================
+
+; ------------------------------------------------------------
+; 生成一名入侵冒险者
+; ------------------------------------------------------------
+@ADD_ADVENTURER
+IF ADVNUM >= 8
+	RETURN 0
+ENDIF
+I = ADVNUM
+ADV_DEPTH:I = 1
+ADV_HP:I = 40 + RAND:40
+ADV_SP:I = 50 + RAND:30
+J = RAND:8
+ADV_JOB:I = J
+SELECTCASE J
+CASE 0
+	ADV_NAME:I '= "见习剑士"
+CASE 1
+	ADV_NAME:I '= "流浪法师"
+CASE 2
+	ADV_NAME:I '= "教会修女"
+CASE 3
+	ADV_NAME:I '= "山道盗贼"
+CASE 4
+	ADV_NAME:I '= "王国骑士"
+CASE 5
+	ADV_NAME:I '= "森林弓手"
+CASE 6
+	ADV_NAME:I '= "巡礼巫女"
+CASE 7
+	ADV_NAME:I '= "影之忍者"
+ENDSELECT
+ADVNUM += 1
+RETURN 1
+
+; ------------------------------------------------------------
+; 把第 ARG 名冒险者变成奴隶
+; ------------------------------------------------------------
+@CAPTURE_ADV(ARG)
+IF SLAVENUM >= 20
+	PRINTL 地牢已经关不下更多人了……
+	RETURN 0
+ENDIF
+I = SLAVENUM
+SLV_NAME:I '= %ADV_NAME:ARG%
+SLV_JOB:I = ADV_JOB:ARG
+SLV_HP:I = 100
+SLV_SP:I = 100
+SLV_RESIST:I = 70 + RAND:30
+SLV_OBEY:I = 0
+SLV_CORRUPT:I = 0
+SLV_SENS:I = 10 + RAND:10
+SLV_EXP:I = 0
+SLV_ASSIGN:I = 0
+SLV_PREG:I = 0
+SLV_LACT:I = 0
+SLAVENUM += 1
+
+; 从入侵列表里删掉这一位（后面的往前挪）
+J = ARG
+WHILE J < ADVNUM - 1
+	K = J + 1
+	ADV_NAME:J '= %ADV_NAME:K%
+	ADV_JOB:J = ADV_JOB:K
+	ADV_HP:J = ADV_HP:K
+	ADV_SP:J = ADV_SP:K
+	ADV_DEPTH:J = ADV_DEPTH:K
+	J += 1
+WEND
+ADVNUM -= 1
+RETURN 1
+
+; ------------------------------------------------------------
+; 奴隶分类：0=未服从 1=服从 2=恶堕
+; ------------------------------------------------------------
+@SLAVE_STATE(ARG)
+IF SLV_CORRUPT:I >= 10
+	RETURN 2
+ELSEIF SLV_OBEY:I >= 50 && SLV_RESIST:I <= 40
+	RETURN 1
+ENDIF
+RETURN 0
+
+; ------------------------------------------------------------
+; 单个奴隶战力（恶堕者可作为将领）
+; ------------------------------------------------------------
+@SLAVE_POWER(ARG)
+P = SLV_EXP:I / 50
+IF SLV_CORRUPT:I >= 10
+	P += 30
+ENDIF
+RETURN P
+
+; ------------------------------------------------------------
+; 全军战力
+; ------------------------------------------------------------
+@TOTAL_POWER
+P = 100 + TROOPS * 5
+FOR I, 0, SLAVENUM
+	IF SLV_CORRUPT:I >= 10
+		P += 30 + SLV_EXP:I / 50
+	ENDIF
+NEXT
+RETURN P
+
+; ------------------------------------------------------------
+; 检查是否有可用奴隶（未服的也算，能调教）
+; ------------------------------------------------------------
+@SLAVE_COUNT
+FOR I, 0, SLAVENUM
+	N += 1
+NEXT
+RETURN N
+
+; ------------------------------------------------------------
+; 今日是否已用光行动
+; ------------------------------------------------------------
+@USE_AP(ARG)
+IF AP < ARG
+	PRINTL 今天的精力已经用完了（行动力不足）。
+	RETURN 0
+ENDIF
+AP -= ARG
+RETURN 1
+
+
+; ------------------------------------------------------------
+; 随机生成一名俘虏（出征带回的人）
+; ------------------------------------------------------------
+@ADD_RANDOM_CAPTIVE
+IF SLAVENUM >= 20
+	RETURN 0
+ENDIF
+I = SLAVENUM
+J = RAND:6
+SELECTCASE J
+CASE 0
+	SLV_NAME:I '= "被抓的农妇"
+CASE 1
+	SLV_NAME:I '= "路过的修女"
+CASE 2
+	SLV_NAME:I '= "逃兵的妹妹"
+CASE 3
+	SLV_NAME:I '= "酒馆女侍"
+CASE 4
+	SLV_NAME:I '= "商队护卫"
+CASE 5
+	SLV_NAME:I '= "山村少女"
+ENDSELECT
+SLV_JOB:I = J
+SLV_HP:I = 100
+SLV_SP:I = 100
+SLV_RESIST:I = 60 + RAND:40
+SLV_OBEY:I = 0
+SLV_CORRUPT:I = 0
+SLV_SENS:I = 10 + RAND:10
+SLV_EXP:I = 0
+SLV_ASSIGN:I = 0
+SLV_PREG:I = 0
+SLV_LACT:I = 0
+SLAVENUM += 1
+RETURN 1

@@ -1,0 +1,119 @@
+﻿; ============================================================
+; 榨取魔城 · army.ERB
+; 征召兵力 / 出征掠夺 / 强化城防
+; ============================================================
+
+; ------------------------------------------------------------
+; 征召兵力：80 魔力 → 1 兵力
+; ------------------------------------------------------------
+@RECRUIT_MENU
+IF MANA < 80
+	PRINTL 魔力不够（需要 80）。
+	RETURN 0
+ENDIF
+CALL USE_AP(1)
+IF RESULT == 0
+	RETURN 0
+ENDIF
+MANA -= 80
+TROOPS += 1
+CALL TOTAL_POWER
+P = RESULT
+PRINTFORML 一只新的魔物从地底爬出来，站进了队列。兵力 {TROOPS}，全军战力 {P}。
+RETURN 1
+
+; ------------------------------------------------------------
+; 出征
+; ------------------------------------------------------------
+@EXPEDITION_MENU
+CALL TOTAL_POWER
+P = RESULT
+CLEARLINE LINECOUNT
+ALIGNMENT CENTER
+PRINTL ── 出征 ──
+ALIGNMENT LEFT
+PRINTFORML 当前战力 {P}　兵力 {TROOPS}
+DRAWLINE
+PRINTL [1] 掠夺村庄（战力40 / 兵力1）→ 金币与 1 名俘虏
+PRINTL [2] 攻打城镇（战力120 / 兵力3）→ 大量金币与 2 名俘虏
+PRINTL [3] 进攻王都（战力400 / 兵力10）→ 结局
+PRINTL [0] 返回
+INPUT
+SELECTCASE RESULT
+CASE 0
+	RETURN 0
+CASE 1
+	IF P < 40 || TROOPS < 1
+		PRINTL 战力或兵力不足。
+		RETURN 0
+	ENDIF
+	CALL USE_AP(1)
+	IF RESULT == 0
+		RETURN 0
+	ENDIF
+	TROOPS -= 1
+	GOLD += 200 + RAND:200
+	CALL ADD_RANDOM_CAPTIVE
+	CLEARLINE LINECOUNT
+	PRINTW 你的魔物冲进村子，火把把夜照得通红。
+	PRINTW 男人被杀散，女人被捆起来拖回地下。
+	PRINTL 金币增加了，地牢里多了一个人。
+CASE 2
+	IF P < 120 || TROOPS < 3
+		PRINTL 战力或兵力不足。
+		RETURN 0
+	ENDIF
+	CALL USE_AP(1)
+	IF RESULT == 0
+		RETURN 0
+	ENDIF
+	TROOPS -= 3
+	GOLD += 800 + RAND:400
+	FOR I, 0, 2
+		CALL ADD_RANDOM_CAPTIVE
+	NEXT
+	CLEARLINE LINECOUNT
+	PRINTW 城镇的守军撑了半夜。城门破开时，街上全是逃跑的人。
+	PRINTW 你的部队按户搜人，把年轻的女人从床底下拖出来。
+	PRINTL 金币与俘虏都到手了。
+CASE 3
+	IF P < 400 || TROOPS < 10
+		PRINTL 你现在还打不下王都。
+		RETURN 0
+	ENDIF
+	CALL USE_AP(1)
+	IF RESULT == 0
+		RETURN 0
+	ENDIF
+	CALL ENDING_WIN
+	RETURN 0
+CASEELSE
+	RETURN 0
+ENDSELECT
+RETURN 1
+
+; ------------------------------------------------------------
+; 强化城防：50 魔力 → 城防 +5
+; ------------------------------------------------------------
+@DEFENSE_MENU
+$DEF_LOOP
+CLEARLINE LINECOUNT
+PRINTFORML 当前城防 {DEFENSE}，魔力 {MANA}
+PRINTL [1] 布置陷阱（50 魔力，城防 +5）
+PRINTL [0] 返回
+INPUT
+IF RESULT == 0
+	RETURN 0
+ENDIF
+IF RESULT != 1
+	GOTO DEF_LOOP
+ENDIF
+IF MANA < 50
+	PRINTL 魔力不够。
+	WAIT
+	GOTO DEF_LOOP
+ENDIF
+MANA -= 50
+DEFENSE += 5
+PRINTFORML 你在走廊里又多布了一排尖刺。城防 {DEFENSE}。
+GOTO DEF_LOOP
